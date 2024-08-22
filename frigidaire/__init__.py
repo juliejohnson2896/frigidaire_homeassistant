@@ -16,6 +16,8 @@ import time
 
 from  .signature_generator import get_signature
 
+from homeassistant.const import UnitOfTemperature
+
 # Frigidaire uses a self-signed certificate, which forces us to disable SSL verification
 # To keep our logs free of spam, we disable warnings on insecure requests
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -152,14 +154,24 @@ class Action:
         raise FrigidaireException("Humidity setting not implemented for OCP API (setting key unknown)")
 
     @classmethod
-    def set_temperature(cls, temperature: int) -> List[Component]:
-        # This is a restriction set by Frigidaire
-        if temperature < 60 or temperature > 90:
-            raise FrigidaireException("Temperature must be between 60 and 90 degrees, inclusive")
+    def set_temperature(cls, temperature: int, unit: str) -> List[Component]:
+        # Checks the current set temp unit
+        if unit == UnitOfTemperature.FAHRENHEIT:
+            # This is a restriction set by Frigidaire
+            if temperature < 60 or temperature > 90:
+                raise FrigidaireException("Temperature must be between 60 and 90 degrees, inclusive")
+
+            return [
+                Component(Setting.TEMPERATURE_REPRESENTATION, Unit.FAHRENHEIT),
+                Component(Setting.TARGET_TEMPERATURE_F, temperature),
+            ]
+
+        if temperature < 16 or temperature > 32:
+            raise FrigidaireException("Temperature must be between 16 and 32 degrees, inclusive")
 
         return [
-            Component(Setting.TEMPERATURE_REPRESENTATION, Unit.FAHRENHEIT),
-            Component(Setting.TARGET_TEMPERATURE_F, temperature),
+            Component(Setting.TEMPERATURE_REPRESENTATION, Unit.CELSIUS),
+            Component(Setting.TARGET_TEMPERATURE_C, temperature),
         ]
 
 
